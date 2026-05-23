@@ -1,0 +1,22 @@
+{
+  "name": "deep-research-agent",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@pinecone-database/pinecone": "^7.2.0",
+    "@tavily/core": "^0.7.3",
+    "dotenv": "^17.4.2",
+    "googleapis": "^171.4.0",
+    "voyageai": "^0.2.1"
+  }
+}
