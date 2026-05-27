@@ -78,5 +78,5 @@ async function runAgent(userQuestion) {
 
 // Complex research question
 runAgent(
-  "what are some of the best schools in Greater noida and Noida to apply for teaching jobs? What are the pros and cons of each?",
+  "Research and recommend the best room air coolers available in India under ₹6000 that provide strong and instant cooling performance for Indian summers. Consider factors such as cooling capacity, energy efficiency, noise levels, and customer reviews in your recommendations.It should be minimum 45lts water tank.",
 );

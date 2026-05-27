@@ -90,20 +90,57 @@ server.tool("read_file", { fileId: z.string() }, async ({ fileId }) => {
   const auth = await authenticate();
   const drive = google.drive({ version: "v3", auth });
 
+  // First get file metadata to check type
+  const meta = await drive.files.get({
+    fileId,
+    fields: "name, mimeType",
+  });
+
+  const mimeType = meta.data.mimeType;
+  const fileName = meta.data.name;
+
   try {
-    // Try export for Google Docs first
-    const response = await drive.files.export(
-      { fileId, mimeType: "text/plain" },
-      { responseType: "text" },
-    );
-    return { content: [{ type: "text", text: response.data }] };
-  } catch {
-    // For PDFs — download raw content
+    // Google Docs/Sheets/Slides — export as plain text
+    if (mimeType.includes("google-apps")) {
+      const response = await drive.files.export(
+        { fileId, mimeType: "text/plain" },
+        { responseType: "text" },
+      );
+      return {
+        content: [
+          { type: "text", text: `[File: ${fileName}]\n\n${response.data}` },
+        ],
+      };
+    }
+
+    // PDFs — export as plain text via Google's converter
+    if (mimeType === "application/pdf") {
+      // Download PDF and convert — Google can't export PDFs as text
+      // So we return file name + tell Claude it's a PDF
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[File: ${fileName}] This is a PDF file. FileId: ${fileId}. Unable to extract text directly from PDF.`,
+          },
+        ],
+      };
+    }
+
+    // Plain text files — read directly
     const response = await drive.files.get(
       { fileId, alt: "media" },
       { responseType: "text" },
     );
-    return { content: [{ type: "text", text: String(response.data) }] };
+    return {
+      content: [
+        { type: "text", text: `[File: ${fileName}]\n\n${response.data}` },
+      ],
+    };
+  } catch (err) {
+    return {
+      content: [{ type: "text", text: `Error reading file: ${err.message}` }],
+    };
   }
 });
 server.tool("get_file_link", { fileId: z.string() }, async ({ fileId }) => {

@@ -146,7 +146,11 @@ export async function ragQuery(question, fileId, fileName, fileText) {
   const relevantChunks = await searchChunks(question);
   console.log(`📦 Found ${relevantChunks.length} relevant chunks`);
 
-  return relevantChunks.join("\n\n");
+  // Return text + source citation
+  return {
+    text: relevantChunks.join("\n\n"),
+    source: fileName,
+  };
 }
 
 // // Test

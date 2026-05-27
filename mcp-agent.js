@@ -10,7 +10,6 @@ const anthropic = new Anthropic();
 async function runDriveAgent(userQuestion) {
   console.log("\n🔍 Question:", userQuestion);
 
-  // Connect to MCP Server
   const transport = new StdioClientTransport({
     command: "node",
     args: ["drive-mcp-server.js"],
@@ -19,10 +18,8 @@ async function runDriveAgent(userQuestion) {
   const mcpClient = new Client({ name: "drive-agent", version: "1.0.0" });
   await mcpClient.connect(transport);
 
-  // Get available tools from MCP server
   const { tools } = await mcpClient.listTools();
 
-  // Convert MCP tools to Anthropic format
   const anthropicTools = tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
@@ -35,6 +32,8 @@ async function runDriveAgent(userQuestion) {
     const response = await anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 1024,
+      system:
+        "When answering questions about documents, always mention the source file name AND the link at the beginning of your answer. For example: 'Based on [filename](link), here is...' — always include the link if provided in the source.",
       tools: anthropicTools,
       messages: messages,
     });
@@ -48,7 +47,6 @@ async function runDriveAgent(userQuestion) {
 
           let result;
 
-          // If reading a file — use RAG instead of raw content
           if (toolUse.name === "read_file") {
             const rawResult = await mcpClient.callTool({
               name: toolUse.name,
@@ -56,19 +54,32 @@ async function runDriveAgent(userQuestion) {
             });
 
             const fileText = rawResult.content[0].text;
-            const fileName = toolUse.input.fileId;
+
+            // Extract real file name from content
+            const fileNameMatch = fileText.match(/\[File: (.+?)\]/);
+            const extractedName = fileNameMatch
+              ? fileNameMatch[1]
+              : toolUse.input.fileId;
 
             console.log("\n🧠 Running RAG on file...");
-            const relevantChunks = await ragQuery(
+            const ragResult = await ragQuery(
               userQuestion,
               toolUse.input.fileId,
-              fileName,
+              extractedName,
               fileText,
             );
 
-            result = relevantChunks;
+            // Citation with real file name
+            // Get file link
+            const linkResult = await mcpClient.callTool({
+              name: "get_file_link",
+              arguments: { fileId: toolUse.input.fileId },
+            });
+            const linkText = linkResult.content[0].text;
+            const viewLink = linkText.match(/View: (.+)/)?.[1] || "";
+
+            result = `[Source: ${extractedName} — ${viewLink}]\n\n${ragResult.text}`;
           } else {
-            // For other tools — call normally
             const rawResult = await mcpClient.callTool({
               name: toolUse.name,
               arguments: toolUse.input,
@@ -96,4 +107,4 @@ async function runDriveAgent(userQuestion) {
   await mcpClient.close();
 }
 
-runDriveAgent("What are Kushagra Varma's key skills from his resume?");
+runDriveAgent("Summarise Kushagra Varma's AADHAAR card details");
