@@ -3,3 +3,5 @@
 node_modules/
 credentials.json
 token.json
+test-drive.js
+test-pinecone.js
